@@ -93,7 +93,8 @@ module AnsibleSpec
 
   # param filename
   #       {"databases":{"hosts":["aaa.com","bbb.com"],"vars":{"a":true}}}
-  # return {"databases"=>["aaa.com", "bbb.com"]}
+  #       {"webservers":["aaa.com","bbb.com"]}
+  # return: Hash {"databases"=>[{"uri" => "aaa.com", "port" => 22}, {"uri" => "bbb.com", "port" => 22}]}
   def self.get_dynamic_inventory(file)
     if file[0] == "/"
       file_path = file
@@ -109,7 +110,17 @@ module AnsibleSpec
       res = dyn_inv.tap{ |h| h.delete("_meta") }
     else
       dyn_inv.each{|k,v|
-        res["#{k.to_s}"] = v['hosts']
+        res["#{k.to_s}"] = Array.new unless res.has_key?("#{k.to_s}")
+        if v.is_a?(Array)
+          # {"webservers":["aaa.com","bbb.com"]}
+          v.each {|host|
+            res["#{k.to_s}"] << {"uri"=> host, "port"=> 22}
+          }
+        elsif v.has_key?("hosts") && v['hosts'].is_a?(Array)
+          v['hosts'].each {|host|
+            res["#{k.to_s}"] << {"uri"=> host, "port"=> 22}
+          }
+        end
       }
     end
     return res
